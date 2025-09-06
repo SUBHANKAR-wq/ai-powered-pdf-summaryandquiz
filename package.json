@@ -2,11 +2,19 @@
   "name": "ai-pdf-learning-assistant-vercel",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "build": "esbuild index.tsx --bundle --outfile=index.js --jsx=automatic --minify --sourcemap"
+  },
   "dependencies": {
-    "@google/genai": "^1.17.0"
+    "@google/genai": "^1.17.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@vercel/node": "^3.2.0",
+    "esbuild": "^0.20.2",
     "typescript": "^5.5.3"
   }
 }
