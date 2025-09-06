@@ -73,8 +73,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         config: { responseMimeType: "application/json", responseSchema: quizSchema },
       });
 
-      const jsonText = response.text.trim();
-      res.status(200).json(JSON.parse(jsonText));
+      const jsonText = response.text;
+      if (!jsonText) {
+        throw new Error("Failed to generate quiz. The AI returned an empty response.");
+      }
+      
+      res.status(200).json(JSON.parse(jsonText.trim()));
 
     } else {
       return res.status(400).json({ error: 'Invalid action specified' });
