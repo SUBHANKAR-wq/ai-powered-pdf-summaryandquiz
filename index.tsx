@@ -1,14 +1,11 @@
 import React, { useState, useCallback, DragEvent } from "react";
 import ReactDOM from "react-dom/client";
-import { GoogleGenAI, Type } from "@google/genai";
 
 // Ensure pdfjs and marked are available in the global scope from the HTML script tags
 declare const pdfjsLib: any;
 declare const marked: any;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 type QuizQuestion = {
   question: string;
@@ -258,47 +255,41 @@ const App = () => {
       setActiveAction(action);
 
       try {
-        let prompt = "";
-        let response;
-        if (action === "summary") {
-          prompt = `Provide a concise, well-structured summary of the following document. Use markdown for formatting:\n\n---\n${pdfText.substring(0, 100000)}\n---`;
-          response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt });
-          setOutput(response.text);
-        } else if (action === "studyPlan") {
-          prompt = `Based on the following document, create a detailed 4-week study plan. Break it down week by week with specific goals, topics to cover, and suggestions for revision. Use markdown for formatting:\n\n---\n${pdfText.substring(0, 100000)}\n---`;
-          response = await ai.models.generateContent({ model: "gemini-2.5-flash", contents: prompt });
-          setOutput(response.text);
-        } else if (action === "quiz") {
-          const quizSchema = {
-            type: Type.OBJECT,
-            properties: {
-              quiz: {
-                type: Type.ARRAY, description: "An array of quiz questions.",
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    question: { type: Type.STRING },
-                    type: { type: Type.STRING, enum: ["mcq", "tf", "short"] },
-                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    answer: { type: Type.STRING },
-                  },
-                  required: ["question", "type", "answer"],
-                },
-              },
-            },
-          };
-          prompt = `Generate a 10-question quiz based on the following document. Include multiple-choice (mcq), true/false (tf), and short-answer (short) questions. For each question, provide the question, type, options (for mcq), and the correct answer. The answer for mcq must exactly match one of the options. Document content:\n\n---\n${pdfText.substring(0, 100000)}\n---`;
-          response = await ai.models.generateContent({
-            model: "gemini-2.5-flash", contents: prompt,
-            config: { responseMimeType: "application/json", responseSchema: quizSchema },
-          });
-          const jsonText = response.text.trim();
-          const quizData = JSON.parse(jsonText);
-          setOutput(quizData as QuizData);
+        const response = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pdfText, action }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'API request failed');
         }
-      } catch (e) {
+        
+        if (action === "quiz") {
+          const quizData = await response.json();
+          setOutput(quizData as QuizData);
+        } else { // Handle streaming for summary and studyPlan
+          const reader = response.body?.getReader();
+          if (!reader) {
+            throw new Error("Failed to read streaming response.");
+          }
+          const decoder = new TextDecoder();
+          let accumulatedText = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            accumulatedText += decoder.decode(value, { stream: true });
+            setOutput(accumulatedText);
+          }
+        }
+
+      } catch (e: any) {
         console.error(e);
-        setError("An error occurred while communicating with the AI. Please try again.");
+        setError(e.message || "An error occurred while communicating with the AI. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -349,7 +340,7 @@ const App = () => {
           )}
         </aside>
         <section className="output-panel">
-          {isLoading ? (
+          {isLoading && !output ? (
             <div className="loading-indicator">
               <div className="loader"></div>
               <p>{pdfText ? "AI is working its magic..." : "Processing PDF..."}</p>
@@ -365,13 +356,14 @@ const App = () => {
             <QuizComponent quizData={output as QuizData} title={selectedFile?.name || "Quiz"} />
           ) : (
             <>
-              <button className="copy-btn" onClick={handleCopy}>
-                {copySuccess || <><i className="fa-solid fa-copy"></i> Copy</>}
+              <button className="copy-btn" onClick={handleCopy} disabled={isLoading}>
+                {isLoading ? "Generating..." : (copySuccess || <><i className="fa-solid fa-copy"></i> Copy</>)}
               </button>
               <div
                 className="markdown-content"
                 dangerouslySetInnerHTML={{ __html: marked.parse(output as string) }}
               ></div>
+               {isLoading && <div className="loader-ellipsis"><span>.</span><span>.</span><span>.</span></div>}
             </>
           )}
         </section>

@@ -227,6 +227,13 @@ main {
   background-color: #dde2e7;
 }
 
+.copy-btn:disabled {
+  cursor: not-allowed;
+  background-color: #f8f9fa;
+  color: var(--secondary-color);
+  opacity: 0.7;
+}
+
 .placeholder {
   display: flex;
   flex-direction: column;
@@ -417,4 +424,21 @@ main {
 .result-item p {
   font-weight: 600;
   margin-bottom: 0.5rem;
+}
+
+.loader-ellipsis {
+    display: inline-block;
+    position: relative;
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+.loader-ellipsis span {
+  animation: loader-ellipsis 1.4s infinite both;
+  display: inline-block;
+}
+.loader-ellipsis span:nth-child(1) { animation-delay: -0.32s; }
+.loader-ellipsis span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes loader-ellipsis {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
 }
