@@ -1,9 +1,12 @@
 {
-  "name": "ai-pdf-learning-assistant-vercel",
+  "name": "ai-pdf-learning-assistant-vite",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "build": "esbuild index.tsx --bundle --outfile=index.js --jsx=automatic --minify --sourcemap"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
@@ -14,7 +17,8 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vercel/node": "^3.2.0",
-    "esbuild": "^0.20.2",
-    "typescript": "^5.5.3"
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.5.3",
+    "vite": "^5.2.0"
   }
 }
